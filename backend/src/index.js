@@ -10,7 +10,7 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173,https://invitacion-cristina40.vercel.app')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);

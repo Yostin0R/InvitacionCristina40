@@ -1,20 +1,12 @@
-const rawApiUrl = import.meta.env.VITE_API_URL;
+const RENDER_API_URL = 'https://name-invitacion-cristina40-api.onrender.com';
 
-if (!rawApiUrl) {
-  console.error(
-    '[API] Falta VITE_API_URL. En Vercel agrega la variable de entorno con la URL de Render (sin barra final) y vuelve a desplegar.'
-  );
-}
+const rawApiUrl =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3001' : RENDER_API_URL);
 
-const API_BASE = `${String(rawApiUrl || '').replace(/\/$/, '')}/api`;
+const API_BASE = `${String(rawApiUrl).replace(/\/$/, '')}/api`;
 
 async function request(url, options = {}) {
-  if (!rawApiUrl && import.meta.env.PROD) {
-    throw new Error(
-      'Configura VITE_API_URL en Vercel con la URL de tu backend en Render y redespliega'
-    );
-  }
-
   const token = localStorage.getItem('admin_token');
   const headers = {
     'Content-Type': 'application/json',
@@ -65,11 +57,6 @@ export const api = {
     request(`/admin/fotografias/${id}`, { method: 'DELETE' }),
   getMensajes: () => request('/admin/mensajes'),
   exportar: (formato = 'csv') => {
-    if (!rawApiUrl && import.meta.env.PROD) {
-      return Promise.reject(
-        new Error('Configura VITE_API_URL en Vercel con la URL de tu backend en Render y redespliega')
-      );
-    }
     const token = localStorage.getItem('admin_token');
     return fetch(`${API_BASE}/admin/exportar?formato=${formato}`, {
       headers: { Authorization: `Bearer ${token}` },
