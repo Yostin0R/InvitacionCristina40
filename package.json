@@ -1,0 +1,13 @@
+{
+  "name": "invitacion-cristina40",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Invitación digital - 40 años de mamá",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "echo Ejecuta en dos terminales: npm run dev:backend y npm run dev:frontend"
+  }
+}
