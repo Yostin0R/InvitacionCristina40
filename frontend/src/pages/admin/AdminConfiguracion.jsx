@@ -21,6 +21,43 @@ const nuevaFoto = (orden) => ({
   activa: true,
 });
 
+function ConfigField({
+  name,
+  label,
+  type = 'text',
+  area = false,
+  value = '',
+  onChange,
+  onBlur,
+  className = '',
+  placeholder = '',
+}) {
+  return (
+    <div className={`form-group ${className}`}>
+      <label>{label}</label>
+      {area ? (
+        <textarea
+          className="form-textarea"
+          value={value || ''}
+          placeholder={placeholder}
+          onChange={(e) => onChange(name, e.target.value)}
+          onBlur={onBlur ? (e) => onBlur(name, e.target.value) : undefined}
+        />
+      ) : (
+        <input
+          className="form-input"
+          type={type}
+          value={type === 'checkbox' ? undefined : value || ''}
+          checked={type === 'checkbox' ? !!value : undefined}
+          placeholder={placeholder}
+          onChange={(e) => onChange(name, type === 'checkbox' ? e.target.checked : e.target.value)}
+          onBlur={onBlur && type !== 'checkbox' ? (e) => onBlur(name, e.target.value) : undefined}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function AdminConfiguracion() {
   const [stepIndex, setStepIndex] = useState(0);
   const [evento, setEvento] = useState(null);
@@ -36,7 +73,7 @@ export default function AdminConfiguracion() {
       .then((data) => {
         setEvento(data.evento);
         setConfiguracion(data.configuracion || {});
-        const fotos = data.fotografias?.length ? data.fotografias : [];
+        const fotos = data.fotografias?.length ? [...data.fotografias] : [];
         while (fotos.length < 4) fotos.push(nuevaFoto(fotos.length));
         setFotografias(fotos);
       })
@@ -44,24 +81,41 @@ export default function AdminConfiguracion() {
   }, []);
 
   const updateEvento = (name, value) => {
-    setEvento({ ...evento, [name]: value });
+    setEvento((prev) => ({ ...prev, [name]: value }));
     setGuardado(false);
   };
 
   const updateConfig = (name, value) => {
-    const nextValue = name === 'imagen_portada' ? toImageUrl(value) || value : value;
-    setConfiguracion({ ...configuracion, [name]: nextValue });
+    setConfiguracion((prev) => ({ ...prev, [name]: value }));
     setGuardado(false);
+  };
+
+  const normalizeConfigImage = (name, value) => {
+    if (name !== 'imagen_portada') return;
+    const converted = toImageUrl(value) || value;
+    if (converted !== value) {
+      setConfiguracion((prev) => ({ ...prev, imagen_portada: converted }));
+    }
   };
 
   const updateFoto = (index, name, value) => {
     setFotografias((prev) => {
       const next = [...prev];
-      const normalized = name === 'url_imagen' ? (toImageUrl(value) || value) : value;
-      next[index] = { ...next[index], [name]: normalized };
+      next[index] = { ...next[index], [name]: value };
       return next;
     });
     setGuardado(false);
+  };
+
+  const normalizeFotoImage = (index, value) => {
+    const converted = toImageUrl(value) || value;
+    if (converted !== value) {
+      setFotografias((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], url_imagen: converted };
+        return next;
+      });
+    }
   };
 
   const agregarFoto = () => {
@@ -121,44 +175,24 @@ export default function AdminConfiguracion() {
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === STEPS.length - 1;
 
-  const Input = ({ name, label, type = 'text', area = false, source = evento, onChange = updateEvento, className = '' }) => (
-    <div className={`form-group ${className}`}>
-      <label>{label}</label>
-      {area ? (
-        <textarea
-          className="form-textarea"
-          value={source[name] || ''}
-          onChange={(e) => onChange(name, e.target.value)}
-        />
-      ) : (
-        <input
-          className="form-input"
-          type={type}
-          value={source[name] || ''}
-          onChange={(e) => onChange(name, type === 'checkbox' ? e.target.checked : e.target.value)}
-          checked={type === 'checkbox' ? !!source[name] : undefined}
-        />
-      )}
-    </div>
-  );
-
   const renderStep = () => {
     if (active.id === 'portada') {
       return (
         <>
-          <Input name="titulo" label="Título de la invitación" className="span-2" />
-          <Input name="homenajeada" label="Nombre de la homenajeada" className="span-2" />
-          <Input name="descripcion" label="Frase principal" area className="span-2" />
-          <Input
+          <ConfigField name="titulo" label="Título de la invitación" className="span-2" value={evento.titulo} onChange={updateEvento} />
+          <ConfigField name="homenajeada" label="Nombre de la homenajeada" className="span-2" value={evento.homenajeada} onChange={updateEvento} />
+          <ConfigField name="descripcion" label="Frase principal" area className="span-2" value={evento.descripcion} onChange={updateEvento} />
+          <ConfigField
             name="imagen_portada"
             label="URL de foto principal"
-            source={configuracion}
+            value={configuracion.imagen_portada}
             onChange={updateConfig}
+            onBlur={normalizeConfigImage}
             className="span-2"
           />
           <p className="span-2" style={{ color: 'var(--ink-soft)', fontSize: '0.78rem', marginTop: -8 }}>
             Puedes pegar un enlace de Google Drive. Debe ser público (“Cualquier persona con el enlace”).
-            Si pegas un link /view, se convertirá automáticamente.
+            Si pegas un link /view, se convertirá automáticamente al salir del campo.
           </p>
           <div className="preview-mini span-2">
             {configuracion.imagen_portada && (
@@ -175,13 +209,13 @@ export default function AdminConfiguracion() {
     if (active.id === 'detalles') {
       return (
         <>
-          <Input name="fecha_evento" label="Fecha del evento" type="date" />
-          <Input name="hora_inicio" label="Hora de inicio" type="time" />
-          <Input name="hora_fin" label="Hora de finalización" type="time" />
-          <Input name="codigo_vestimenta" label="Código de vestimenta" />
-          <Input name="lugar" label="Lugar" className="span-2" />
-          <Input name="direccion" label="Dirección" className="span-2" />
-          <Input name="url_mapa" label="Enlace de Google Maps" className="span-2" />
+          <ConfigField name="fecha_evento" label="Fecha del evento" type="date" value={evento.fecha_evento} onChange={updateEvento} />
+          <ConfigField name="hora_inicio" label="Hora de inicio" type="time" value={evento.hora_inicio} onChange={updateEvento} />
+          <ConfigField name="hora_fin" label="Hora de finalización" type="time" value={evento.hora_fin} onChange={updateEvento} />
+          <ConfigField name="codigo_vestimenta" label="Código de vestimenta" value={evento.codigo_vestimenta} onChange={updateEvento} />
+          <ConfigField name="lugar" label="Lugar" className="span-2" value={evento.lugar} onChange={updateEvento} />
+          <ConfigField name="direccion" label="Dirección" className="span-2" value={evento.direccion} onChange={updateEvento} />
+          <ConfigField name="url_mapa" label="Enlace de Google Maps" className="span-2" value={evento.url_mapa} onChange={updateEvento} />
         </>
       );
     }
@@ -189,9 +223,9 @@ export default function AdminConfiguracion() {
     if (active.id === 'cuenta') {
       return (
         <>
-          <Input name="fecha_evento" label="Fecha para la cuenta regresiva" type="date" />
-          <Input name="hora_inicio" label="Hora objetivo" type="time" />
-          <Input name="fecha_limite_confirmacion" label="Fecha límite para confirmar" type="date" className="span-2" />
+          <ConfigField name="fecha_evento" label="Fecha para la cuenta regresiva" type="date" value={evento.fecha_evento} onChange={updateEvento} />
+          <ConfigField name="hora_inicio" label="Hora objetivo" type="time" value={evento.hora_inicio} onChange={updateEvento} />
+          <ConfigField name="fecha_limite_confirmacion" label="Fecha límite para confirmar" type="date" value={evento.fecha_limite_confirmacion} onChange={updateEvento} className="span-2" />
           <div className="preview-mini span-2">
             <p className="eyebrow">Vista previa</p>
             <h2>Cada vez falta menos</h2>
@@ -251,6 +285,7 @@ export default function AdminConfiguracion() {
                       className="form-input"
                       value={foto.url_imagen || ''}
                       onChange={(e) => updateFoto(index, 'url_imagen', e.target.value)}
+                      onBlur={(e) => normalizeFotoImage(index, e.target.value)}
                       placeholder="Pega un enlace de Drive o una URL directa de imagen"
                     />
                     <p style={{ color: 'var(--ink-soft)', fontSize: '0.72rem', marginTop: 6 }}>
@@ -288,8 +323,21 @@ export default function AdminConfiguracion() {
     if (active.id === 'confirmacion') {
       return (
         <>
-          <Input name="fecha_limite_confirmacion" label="Fecha límite de confirmación" type="date" />
-          <Input name="mensaje_regalos" label="Mensaje sobre regalos" area className="span-2" />
+          <ConfigField
+            name="fecha_limite_confirmacion"
+            label="Fecha límite de confirmación"
+            type="date"
+            value={evento.fecha_limite_confirmacion}
+            onChange={updateEvento}
+          />
+          <ConfigField
+            name="mensaje_regalos"
+            label="Mensaje sobre regalos"
+            area
+            className="span-2"
+            value={evento.mensaje_regalos}
+            onChange={updateEvento}
+          />
           <div className="preview-mini span-2">
             <p className="eyebrow">Formulario RSVP</p>
             <h2>Confirma tu asistencia</h2>
@@ -303,31 +351,31 @@ export default function AdminConfiguracion() {
 
     return (
       <>
-        <Input
+        <ConfigField
           name="color_principal"
           label="Color principal"
           type="color"
-          source={configuracion}
+          value={configuracion.color_principal}
           onChange={updateConfig}
         />
-        <Input
+        <ConfigField
           name="color_secundario"
           label="Color secundario"
           type="color"
-          source={configuracion}
+          value={configuracion.color_secundario}
           onChange={updateConfig}
         />
-        <Input
+        <ConfigField
           name="tipografia"
           label="Tipografía"
-          source={configuracion}
+          value={configuracion.tipografia}
           onChange={updateConfig}
           className="span-2"
         />
-        <Input
+        <ConfigField
           name="url_musica"
           label="URL de música"
-          source={configuracion}
+          value={configuracion.url_musica}
           onChange={updateConfig}
           className="span-2"
         />
