@@ -1,6 +1,31 @@
 /**
+ * Extrae el ID de un enlace de Google Drive.
+ */
+export function extractDriveId(url) {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^/]+)/i,
+    /drive\.google\.com\/open\?[^#]*[?&]id=([^&]+)/i,
+    /drive\.google\.com\/uc\?[^#]*[?&]id=([^&]+)/i,
+    /drive\.google\.com\/thumbnail\?[^#]*[?&]id=([^&]+)/i,
+    /drive\.usercontent\.google\.com\/download\?[^#]*[?&]id=([^&]+)/i,
+    /lh3\.googleusercontent\.com\/d\/([^=/?#]+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  }
+
+  return null;
+}
+
+/**
  * Convierte enlaces de Drive/compartidos a una URL usable en <img>.
- * Google Drive "view" no funciona como src de imagen.
+ * El formato /view de Drive no funciona como src.
+ * lh3.googleusercontent.com es el que responde image/* correctamente.
  */
 export function toImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
@@ -8,22 +33,9 @@ export function toImageUrl(url) {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  // https://drive.google.com/file/d/FILE_ID/view?...
-  const fileMatch = trimmed.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
-  if (fileMatch?.[1]) {
-    return `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
-  }
-
-  // https://drive.google.com/open?id=FILE_ID
-  const openMatch = trimmed.match(/drive\.google\.com\/open\?[^#]*id=([^&]+)/i);
-  if (openMatch?.[1]) {
-    return `https://drive.google.com/uc?export=view&id=${decodeURIComponent(openMatch[1])}`;
-  }
-
-  // https://drive.google.com/uc?id=FILE_ID or already uc?export=view
-  const ucMatch = trimmed.match(/drive\.google\.com\/uc\?[^#]*id=([^&]+)/i);
-  if (ucMatch?.[1] && !/export=view/i.test(trimmed)) {
-    return `https://drive.google.com/uc?export=view&id=${decodeURIComponent(ucMatch[1])}`;
+  const driveId = extractDriveId(trimmed);
+  if (driveId) {
+    return `https://lh3.googleusercontent.com/d/${driveId}=w2000`;
   }
 
   return trimmed;
