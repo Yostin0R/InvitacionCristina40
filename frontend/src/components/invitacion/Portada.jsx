@@ -1,10 +1,11 @@
 import { formatearFechaLarga, nombreDia } from '../../utils/dates';
+import { toImageUrl } from '../../utils/mediaUrl';
 
 export default function Portada({ evento, imagenPortada, musicaSonando, onSiguiente }) {
   return (
     <section className="portada">
       <div className="portada-foto-wrap">
-        <img className="portada-foto" src={imagenPortada} alt={evento.homenajeada} />
+        <img className="portada-foto" src={toImageUrl(imagenPortada)} alt={evento.homenajeada} />
         {musicaSonando && (
           <div className="portada-nowplaying">
             <span className="eq"><i></i><i></i><i></i></span>

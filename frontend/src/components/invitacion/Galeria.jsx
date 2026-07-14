@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toImageUrl } from '../../utils/mediaUrl';
 
 const PERIODOS = {
   Infancia: '1986 — 1994',
@@ -39,7 +40,7 @@ export default function Galeria({ fotografias, onSiguiente, siguienteLabel }) {
               <p className="tl-desc">{foto.descripcion}</p>
             </div>
             <div className="tl-foto" onClick={() => setAmpliada(foto)}>
-              <img src={foto.url_imagen} alt={foto.descripcion} loading="lazy" />
+              <img src={toImageUrl(foto.url_imagen)} alt={foto.descripcion} loading="lazy" />
             </div>
           </div>
         ))}
@@ -58,7 +59,7 @@ export default function Galeria({ fotografias, onSiguiente, siguienteLabel }) {
         {fotografias.map((foto) => (
           <img
             key={`g-${foto.id_fotografia}`}
-            src={foto.url_imagen}
+            src={toImageUrl(foto.url_imagen)}
             alt={foto.descripcion}
             loading="lazy"
             onClick={() => setAmpliada(foto)}
@@ -75,7 +76,7 @@ export default function Galeria({ fotografias, onSiguiente, siguienteLabel }) {
       {ampliada && (
         <div className="galeria-modal" onClick={() => setAmpliada(null)}>
           <button className="galeria-modal-cerrar" onClick={() => setAmpliada(null)}>×</button>
-          <img src={ampliada.url_imagen} alt={ampliada.descripcion} />
+          <img src={toImageUrl(ampliada.url_imagen)} alt={ampliada.descripcion} />
         </div>
       )}
     </section>

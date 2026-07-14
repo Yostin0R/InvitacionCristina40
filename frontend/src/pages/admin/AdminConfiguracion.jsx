@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../api';
 import { IconTrash, IconPlus } from '../../components/icons';
+import { toImageUrl } from '../../utils/mediaUrl';
 
 const STEPS = [
   { id: 'portada', title: 'Portada', desc: 'Nombre, frase y foto principal' },
@@ -48,14 +49,16 @@ export default function AdminConfiguracion() {
   };
 
   const updateConfig = (name, value) => {
-    setConfiguracion({ ...configuracion, [name]: value });
+    const nextValue = name === 'imagen_portada' ? toImageUrl(value) || value : value;
+    setConfiguracion({ ...configuracion, [name]: nextValue });
     setGuardado(false);
   };
 
   const updateFoto = (index, name, value) => {
     setFotografias((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [name]: value };
+      const normalized = name === 'url_imagen' ? (toImageUrl(value) || value) : value;
+      next[index] = { ...next[index], [name]: normalized };
       return next;
     });
     setGuardado(false);
@@ -86,7 +89,22 @@ export default function AdminConfiguracion() {
     setError('');
     setGuardando(true);
     try {
-      await api.actualizarEvento({ evento, configuracion, fotografias });
+      const configToSave = {
+        ...configuracion,
+        imagen_portada: toImageUrl(configuracion.imagen_portada) || configuracion.imagen_portada,
+      };
+      const fotosToSave = fotografias.map((foto) => ({
+        ...foto,
+        url_imagen: toImageUrl(foto.url_imagen) || foto.url_imagen,
+      }));
+
+      await api.actualizarEvento({
+        evento,
+        configuracion: configToSave,
+        fotografias: fotosToSave,
+      });
+      setConfiguracion(configToSave);
+      setFotografias(fotosToSave);
       setGuardado(true);
     } catch (err) {
       setError(err.message);
@@ -138,8 +156,14 @@ export default function AdminConfiguracion() {
             onChange={updateConfig}
             className="span-2"
           />
+          <p className="span-2" style={{ color: 'var(--ink-soft)', fontSize: '0.78rem', marginTop: -8 }}>
+            Puedes pegar un enlace de Google Drive. Debe ser público (“Cualquier persona con el enlace”).
+            Si pegas un link /view, se convertirá automáticamente.
+          </p>
           <div className="preview-mini span-2">
-            {configuracion.imagen_portada && <img src={configuracion.imagen_portada} alt="Vista previa portada" />}
+            {configuracion.imagen_portada && (
+              <img src={toImageUrl(configuracion.imagen_portada)} alt="Vista previa portada" />
+            )}
             <p className="eyebrow">Invitación exclusiva</p>
             <h2>{evento.homenajeada}</h2>
             <p style={{ color: 'var(--ink-soft)', marginTop: 8 }}>{evento.descripcion}</p>
@@ -184,7 +208,10 @@ export default function AdminConfiguracion() {
         <>
           {fotografias.map((foto, index) => (
             <div className="photo-editor span-2" key={foto.id_fotografia || index}>
-              <img src={foto.url_imagen || 'https://placehold.co/160x160?text=Foto'} alt={`Foto ${index + 1}`} />
+              <img
+                src={toImageUrl(foto.url_imagen) || 'https://placehold.co/160x160?text=Foto'}
+                alt={`Foto ${index + 1}`}
+              />
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span className="eyebrow" style={{ color: 'var(--ink-soft)' }}>
@@ -224,7 +251,11 @@ export default function AdminConfiguracion() {
                       className="form-input"
                       value={foto.url_imagen || ''}
                       onChange={(e) => updateFoto(index, 'url_imagen', e.target.value)}
+                      placeholder="Pega un enlace de Drive o una URL directa de imagen"
                     />
+                    <p style={{ color: 'var(--ink-soft)', fontSize: '0.72rem', marginTop: 6 }}>
+                      En Drive: Compartir → Cualquier persona con el enlace.
+                    </p>
                   </div>
                   <div className="form-group span-2">
                     <label>Descripción / frase</label>
